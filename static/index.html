@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>DIY Head Tracking Server</title>
+  <script type="text/javascript">
+  var ws;
+  var orient;
+  var xop = '', yop = '', zop = '';
+
+  function handleOrientation(event) {
+    var x = event.beta;  // In degree in the range [-180,180]
+    var y = event.gamma; // In degree in the range [-90,90]
+    var z = event.alpha; // 
+
+    var xo = Number(x).toFixed(5);
+    var yo = Number(y).toFixed(5);
+    var zo = Number(z).toFixed(5);
+
+    if (xo != xop || yo != yop || zo != zop) {
+      // TODO consider to use JSON instead.
+      ws.send(xo + "/" + yo + "/" + zo + "/" + orient)
+      xop = xo;
+      yop = yo;
+      zop = zo;
+    }
+  }
+
+  // 1) Registers handler for devide orientation changes;
+  // 2) Makes WebSocket connection to the server.
+  function onLoad() {
+    window.addEventListener('deviceorientation', handleOrientation);
+
+    orient = window.orientation || 0; // active default
+    window.addEventListener('orientationchange', function() {
+          orient = window.orientation;
+        }, false);
+
+    let hostname = window.location.hostname;
+    ws = new WebSocket("ws://" + hostname + ":3000/websocket");
+    // TODO check whether it connected successfully.
+
+    ws.onmessage = function (evt) {
+      // Nothing to do.
+    };
+    ws.onclose = function() {
+      // Nothing to do.
+    };
+  }
+
+  </script>
+</head>
+<body onload="onLoad()">
+</body>
+</html>
