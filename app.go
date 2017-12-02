@@ -1,3 +1,24 @@
+// MIT License
+//
+// Copyright (c) 2017 Artem Zhuravsky
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 package main
 
 import (
@@ -8,7 +29,6 @@ import (
 	"log"
 	"math"
 	"net"
-    //"time"
 	"net/http"
 	"strconv"
 	"strings"
@@ -30,8 +50,6 @@ const (
 var (
     thePoint = []float64{0, 0, 1}
 )
-
-//type Matrix3by3 [][]float64
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -279,40 +297,6 @@ func main() {
                 
 				e := Entry{x: x, y: y, z: z}
 				raw_gyro_data <- e
-/*
-
-
-				rot_matrix := buildRotationMatrix(x, y, z)
-
-				the_pointA := []float64{0, 0, 1}
-				//the_pointB := []float64{0, 1, 0}
-				pointA2 := multiply_matrices(the_pointA, rot_matrix)
-				//pointB2 := multiply_matrices(the_pointB, rot_matrix)
-
-				c := math.Sqrt(pointA2[0]*pointA2[0] + pointA2[1]*pointA2[1])
-				heading := math.Asin(pointA2[1]/c) / math.Pi * 180
-
-				c2 := math.Sqrt(pointA2[0]*pointA2[0] + pointA2[2]*pointA2[2])
-				pitch := math.Asin(pointA2[2]/c2) / math.Pi * 180
-                
-
-                //curTime := time.Now()
-                //elapsed = curTime.Sub(prevTime)
-                //prevTime = curTime
-                    
-                //fmt.Printf("   Heading: %.3f Pitch: %.3f (elapsed: __s)\n", heading, pitch)
-                //fmt.Printf("Parsed: %.2f, %.2f, %.2f\n", alpha, beta, gamma)
-				//fmt.Printf("      %v\n", rot_matrix)
-				//fmt.Printf("      Point: %v\n", point2)
-				//fmt.Printf("  Point: A: %.2f, %.2f, %.2f      head: %.2f   %.2f\n",
-				//	pointA2[0], pointA2[1], pointA2[2],
-					//pointB2[0], pointB2[1], pointB2[2],
-				//	heading,
-				//	orient)
-
-				e := Entry{x: heading, y: pitch, z: orient}
-				data <- e
-*/
 			}
 		}
 	})
