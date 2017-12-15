@@ -25,13 +25,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
-	"math"
 	"net"
-	"net/http"
-	"strconv"
-	"strings"
 )
 
 type Entry struct {
@@ -43,47 +38,7 @@ type Subscriber struct {
 	active bool
 }
 
-const (
-	degToRad = math.Pi / 180.0
-)
-
-var (
-	thePoint = []float64{0, 0, 1}
-)
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 var subscribers = make([]*Subscriber, 0, 30)
-
-func buildRotationMatrix(x, y, z float64) [][]float64 {
-	cx := math.Cos(x)
-	cy := math.Cos(y)
-	cz := math.Cos(z)
-	sx := math.Sin(x)
-	sy := math.Sin(y)
-	sz := math.Sin(z)
-
-	m11 := cz*cy - sz*sx*sy
-	m12 := -cx * sz
-	m13 := cy*sz*sx + cz*sy
-
-	m21 := cy*sz + cz*sx*sy
-	m22 := cz * cx
-	m23 := sz*sy - cz*cy*sx
-
-	m31 := -cx * sy
-	m32 := sx
-	m33 := cx * cy
-
-	return [][]float64{
-		{m11, m12, m13},
-		{m21, m22, m23},
-		{m31, m32, m33},
-	}
-}
 
 func multiply_matrices(a []float64, b [][]float64) []float64 {
 	var num_cols = len(a)
@@ -151,16 +106,11 @@ func handleTcpConnection(c net.Conn, sync chan bool) {
 		float64ToBuf(e.y, &buf)
 		float64ToBuf(e.z, &buf)
 
-		//out_buf_size := buf.Len()
-		out_buf := buf.Bytes()
-
-		_, err := c.Write(out_buf)
+		_, err := c.Write(buf.Bytes())
 		if err != nil {
 			fmt.Println("Couldn't write TCP: ", err)
 			break
-		} //else {
-		//	fmt.Printf("Wrote %d bytes to TCP out of %d\n", num, out_buf_size)
-		//}
+		}
 	}
 	sync <- false
 	subs.active = false
@@ -169,7 +119,7 @@ func handleTcpConnection(c net.Conn, sync chan bool) {
 func tcpServer(input chan Entry, sync chan bool) {
 	ln, err := net.Listen("tcp", ":3001")
 	if err != nil {
-		fmt.Println("Coudln't listen TCP: ", err)
+		fmt.Println("Coudln't start listening TCP: ", err)
 	}
 	log.Println("Listening TCP on 3001...")
 	for {
@@ -183,120 +133,12 @@ func tcpServer(input chan Entry, sync chan bool) {
 	}
 }
 
-func dataProcessor(raw_data chan Entry, sync chan bool, out_data chan Entry) {
-	var latest_rotation_mtx [][]float64
-	var rotation_ref_mtx [][]float64
-	var rot_mtx_1 [][]float64
-	var initialized = false
-	var mtx1_initialized = false
-	for {
-		select {
-		case rd := <-raw_data:
-			rot_mtx := buildRotationMatrix(rd.x, rd.y, rd.z)
-			latest_rotation_mtx = rot_mtx
-			if !mtx1_initialized {
-				rot_mtx_1 = buildRotationMatrix(rd.x, 90*degToRad, rd.z)
-				mtx1_initialized = true
-			}
-
-			//the_pointA := []float64{0, 0, 1}
-
-			var pointA2 []float64
-			//pointA3 := pointA2
-			if initialized {
-				//ref_mtx := *rotation_ref_mtx
-				//ref_t := transpose(rotation_ref_mtx)
-				//fmt.Printf("    %v", rotation_ref_mtx)
-				//rot_mtx = multiply_matrices_2d(rot_mtx, transpose(rot_mtx))
-				//fmt.Printf("    %v", rot_mtx)
-				//rot_mtx = rotation_ref_mtx
-
-				//pointA2 = multiply_matrices(the_pointA, transpose(rotation_ref_mtx))
-				//pointA2 = multiply_matrices(pointA2, transpose(rot_mtx_1))
-				//pointA2 = multiply_matrices(pointA2, rot_mtx)
-				mtx := multiply_matrices_2d(transpose(rotation_ref_mtx), rot_mtx)
-				mtx = multiply_matrices_2d(mtx, rot_mtx_1)
-				pointA2 = multiply_matrices(thePoint, mtx)
-				//pointA2 = multiply_matrices(pointA2, transpose(rotation_ref_mtx))
-				//pointA2 = multiply_matrices(pointA2, rot_mtx_1)
-
-				//rot_mtx = multiply_matrices_2d(transpose(rot_mtx), rotation_ref_mtx)
-			} else {
-				pointA2 = multiply_matrices(thePoint, rot_mtx)
-			}
-
-			//pointA2 = pointA3
-
-			c := math.Sqrt(pointA2[0]*pointA2[0] + pointA2[1]*pointA2[1])
-			heading := math.Asin(pointA2[1]/c) / math.Pi * 180
-
-			c2 := math.Sqrt(pointA2[0]*pointA2[0] + pointA2[2]*pointA2[2])
-			pitch := math.Asin(pointA2[2]/c2) / math.Pi * 180
-
-			//fmt.Printf("  Point: A: %.2f, %.2f, %.2f\n", pointA2[0], pointA2[1], pointA2[2])
-			fmt.Printf("   Heading: %.3f Pitch: %.3f\n", heading, pitch)
-
-			out_data <- Entry{x: heading, y: pitch, z: 0}
-
-		case synced := <-sync:
-			initialized = synced
-			if synced {
-				rotation_ref_mtx = latest_rotation_mtx
-				log.Println("Synced!")
-			} else {
-				log.Println("Unsynced")
-			}
-		}
-	}
-}
-
 func main() {
 	data := make(chan Entry, 10)
-	raw_gyro_data := make(chan Entry, 10)
 	sync := make(chan bool, 10)
 
 	//var prevTime = time.Unix(0, 0)
 	//var elapsed, _ = time.ParseDuration("0ms")
-
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/", fs)
-	http.HandleFunc("/websocket", func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		log.Println("WS Connected!!")
-		for {
-			_, msg, err := conn.ReadMessage()
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			if string(msg) == "close" {
-				conn.Close()
-				fmt.Println("Stopping WS")
-				return
-			} else {
-				str_msg := string(msg)
-				str_values := strings.Split(str_msg, "/")
-				beta_s, gamma_s, alpha_s := str_values[0], str_values[1], str_values[2]
-				alpha, _ := strconv.ParseFloat(alpha_s, 64)
-				beta, _ := strconv.ParseFloat(beta_s, 64)
-				gamma, _ := strconv.ParseFloat(gamma_s, 64)
-				//orient, _ := strconv.ParseFloat(orient_s, 64)
-
-				//fmt.Printf("   raw: %.1f, %.1f, %.1f\n", alpha, beta, gamma)
-
-				x := beta * degToRad
-				y := gamma * degToRad
-				z := alpha * degToRad
-
-				e := Entry{x: x, y: y, z: z}
-				raw_gyro_data <- e
-			}
-		}
-	})
 
 	go func() {
 		for {
@@ -309,8 +151,5 @@ func main() {
 		}
 	}()
 	go tcpServer(data, sync)
-	go dataProcessor(raw_gyro_data, sync, data)
-
-	log.Println("Listening...")
-	http.ListenAndServe(":3000", nil)
+	StartPhoneGyroWebServer(data, sync) // It blocks, hence it must be the last line.
 }
