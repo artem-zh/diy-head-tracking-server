@@ -33,7 +33,7 @@ import (
 
 type RawDataEntry struct {
 	alpha, beta, gamma float64
-    ts_delta uint64
+	ts_delta           uint64
 }
 
 const (
@@ -81,7 +81,7 @@ func dataProcessor(raw_data chan RawDataEntry, sync chan bool, out_data chan Ent
 	var rot_mtx_1 [][]float64
 	var initialized = false
 	var mtx1_initialized = false
-//    var mirrorCoef float64 = 1.0
+	//    var mirrorCoef float64 = 1.0
 	for {
 		select {
 		case rd := <-raw_data:
@@ -124,11 +124,11 @@ func dataProcessor(raw_data chan RawDataEntry, sync chan bool, out_data chan Ent
 			initialized = synced
 			if synced {
 				rotation_ref_mtx = latest_rotation_mtx
-                //pointRotated := multiply_matrices(thePoint, rotation_ref_mtx)
-                //mirrorCoef = 1.0
-			    //if pointRotated[0] > 0 {
+				//pointRotated := multiply_matrices(thePoint, rotation_ref_mtx)
+				//mirrorCoef = 1.0
+				//if pointRotated[0] > 0 {
 				//    mirrorCoef = -1.0
-			    //}
+				//}
 				log.Println("Synced!")
 			} else {
 				log.Println("Unsynced")
@@ -140,7 +140,7 @@ func dataProcessor(raw_data chan RawDataEntry, sync chan bool, out_data chan Ent
 func StartPhoneGyroWebServer(outData chan Entry, sync chan bool) {
 	//var signalStr string
 	raw_gyro_data := make(chan RawDataEntry, 10)
-    var prev_timestamp uint64 = 0
+	var prev_timestamp uint64 = 0
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/", fs)
@@ -165,19 +165,19 @@ func StartPhoneGyroWebServer(outData chan Entry, sync chan bool) {
 				str_msg := string(msg)
 				str_values := strings.Split(str_msg, "/")
 				beta_s, gamma_s, alpha_s := str_values[0], str_values[1], str_values[2]
-                unix_ts_s := str_values[4]
+				unix_ts_s := str_values[4]
 
 				alpha, _ := strconv.ParseFloat(alpha_s, 64)
 				beta, _ := strconv.ParseFloat(beta_s, 64)
 				gamma, _ := strconv.ParseFloat(gamma_s, 64)
-                unix_ts, _ := strconv.ParseUint(unix_ts_s, 10, 64)
+				unix_ts, _ := strconv.ParseUint(unix_ts_s, 10, 64)
 				//orient, _ := strconv.ParseFloat(orient_s, 64)
 
-                var ts_delta uint64 = 0
-                if prev_timestamp > 0 {
-                    ts_delta = unix_ts - prev_timestamp
-                }
-                prev_timestamp = unix_ts
+				var ts_delta uint64 = 0
+				if prev_timestamp > 0 {
+					ts_delta = unix_ts - prev_timestamp
+				}
+				prev_timestamp = unix_ts
 
 				fmt.Printf("   raw: %.1f, %.1f, %.1f [%d]\n", alpha, beta, gamma, ts_delta)
 
