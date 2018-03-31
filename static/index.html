@@ -18,8 +18,9 @@
     var zo = Number(z).toFixed(5);
 
     if (xo != xop || yo != yop || zo != zop) {
+      var ts_unix = new Date().getTime()
       // TODO consider to use JSON instead.
-      ws.send(xo + "/" + yo + "/" + zo + "/" + orient)
+      ws.send(xo + "/" + yo + "/" + zo + "/" + orient + "/" + ts_unix)
       xop = xo;
       yop = yo;
       zop = zo;
@@ -53,3 +54,4 @@
 <body onload="onLoad()">
 </body>
 </html>
+
